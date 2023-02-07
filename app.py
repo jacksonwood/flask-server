@@ -69,12 +69,13 @@ def generate_text(input_value):
     return response.choices[0].text
 
 
-@app.route("/generate_product/<input_value>", methods=['POST', 'GET'])
+@app.route("/generate_product", methods=['POST', 'GET'])
 @cross_origin(origin='*', headers=['Content-Type', 'Authorization'])
-def generate_product(input_value):
+def generate_product():
     chest_logo = "https://gateway.pinata.cloud/ipfs/QmXKu3kbkksCJsHaoJ2N5KUsRF3HFWuvacZTP7arhD3rVS?_gl=1*oadv6z*_ga*MjE0MjEyNjU3NC4xNjc1MDE0NTg2*_ga_5RMPXG14TE*MTY3NTYzMTAyOC43LjAuMTY3NTYzMTAyOC42MC4wLjA.&__cf_chl_tk=seoLwhAI3lVqOMpaODAvbQo6Ct_mfWGsiaO52TMpjPU-1675631030-0-gaNycGzNDdE"
 
-    image_url = input_value
+    data = request.json
+    image_url = data['imageUrl']
 
     data = {
         "sync_product": {
