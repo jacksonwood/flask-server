@@ -3,11 +3,23 @@ import os
 import openai
 import requests
 from flask_cors import CORS, cross_origin
+import threading
 
 openai_key = os.environ.get("OPENAI_KEY")
 
 printful_key = os.environ.get("PRINTFUL_KEY")
 
+prompt_lock = threading.Lock()
+prompt = None
+
+task_lock = threading.Lock()
+task_key = None
+
+
+headers = {
+    'Authorization': 'Bearer ' + printful_key,
+    'Content-Type': 'application/json'
+}
 
 app = Flask(__name__)
 cors = CORS(app)
@@ -19,16 +31,12 @@ CORS(app, resources={r"/generate_product/": {"origins": "*"},
                      r"/generate_text/<input_value>": {"origins": "*"}})
 
 
-@ app.route("/members")
-def members():
-    return {"members": ["Member1", "Member2", "Member3"]}
-
-
 @ app.route("/load_ai/<input_value>", methods=['GET'])
 @cross_origin(origin='*', headers=['Content-Type', 'Authorization'])
 def load_ai(input_value):
     global prompt
-    prompt = input_value
+    with prompt_lock:
+        prompt = input_value
     if prompt is None or prompt == "":
         return jsonify({"error": "prompt parameter is required"}), 400
     openai.api_key = openai_key
@@ -46,7 +54,8 @@ def load_ai(input_value):
 @ app.route("/generate_text/<input_value>", methods=['GET'])
 @cross_origin(origin='*', headers=['Content-Type', 'Authorization'])
 def generate_text(input_value):
-    prompt = input_value
+    with prompt_lock:
+        prompt = input_value
     if prompt is None or prompt == "":
         return jsonify({"error": "prompt parameter is required"}), 400
 
@@ -66,18 +75,9 @@ def generate_text(input_value):
 @cross_origin(origin='*', headers=['Content-Type', 'Authorization'])
 def generate_product():
     chest_logo = "https://gateway.pinata.cloud/ipfs/QmXKu3kbkksCJsHaoJ2N5KUsRF3HFWuvacZTP7arhD3rVS?_gl=1*oadv6z*_ga*MjE0MjEyNjU3NC4xNjc1MDE0NTg2*_ga_5RMPXG14TE*MTY3NTYzMTAyOC43LjAuMTY3NTYzMTAyOC42MC4wLjA.&__cf_chl_tk=seoLwhAI3lVqOMpaODAvbQo6Ct_mfWGsiaO52TMpjPU-1675631030-0-gaNycGzNDdE"
-    # Avoid CORS policy by making a request through a proxy
-    # parse the string into a JSON object
-    data = request.json
-    # extract the URL
-    image_url = data['imageUrl']
 
-    # Make a POST request to another API
-    external_api_url = 'https://api.printful.com/store/products'
-    headers = {
-        'Authorization': 'Bearer ' + printful_key,
-        'Content-Type': 'application/json'
-    }
+    data = request.json
+    image_url = data['imageUrl']
 
     data = {
         "sync_product": {
@@ -196,10 +196,10 @@ def generate_product():
                     }
                 ]
             }
-        ],
+        ]
     }
     external_api_response = requests.post(
-        external_api_url, headers=headers, json=data)
+        'https://api.printful.com/store/products', headers=headers, json=data)
 
     response = external_api_response.json()
 
@@ -207,11 +207,6 @@ def generate_product():
     name = response['result']['name']
 
     mock_url = 'https://api.printful.com/mockup-generator/create-task/438'
-
-    headers = {
-        'Authorization': 'Bearer ' + printful_key,
-        'Content-Type': 'application/json'
-    }
 
     data = {
         "variant_ids": [11576, 11577, 11578, 11579],
@@ -232,15 +227,21 @@ def generate_product():
                     "left": 0
                 }
             }
-        ],
-        "options": ["Back"]
+        ]
     }
-    mock_results = requests.post(mock_url, headers=headers, json=data)
-    data = mock_results.json()
-    print(data)
-    task_key = data['result']['task_key']
+    task_key = None
+    max_retries = 3
+    retry_count = 0
+    while task_key is None and retry_count < max_retries:
+        mock_results = requests.post(mock_url, headers=headers, json=data)
+        data = mock_results.json()
+        with task_lock:
+            task_key = data.get('result', {}).get('task_key')
+        retry_count += 1
 
-    print(jsonify({"task_key": task_key, "id": str(id), "name": name}).json)
+    if task_key is None:
+        raise Exception("Failed to retrieve task_key after multiple retries")
+
     return jsonify({"task_key": task_key, "id": str(id), "name": name}).json
 
 
@@ -251,11 +252,6 @@ def view_product():
         data = request.json
         task_key = data['task_key']
         new_url = f'https://api.printful.com/mockup-generator/task?task_key={task_key}'
-
-        headers = {
-            'Authorization': 'Bearer ' + printful_key,
-            'Content-Type': 'application/json'
-        }
 
         y = requests.get(url=new_url, headers=headers)
         data = y.json()
@@ -273,11 +269,6 @@ def view_product():
 def get_all_products(input_value):
     try:
         url = f'https://api.printful.com/sync/products/{input_value}'
-
-        headers = {
-            'Authorization': 'Bearer ' + printful_key,
-            'Content-Type': 'application/json'
-        }
 
         y = requests.get(url=url, headers=headers)
         data = y.json()
