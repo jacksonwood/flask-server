@@ -11,16 +11,11 @@ from io import BytesIO
 import io
 from pathlib import Path
 import uuid
-from dotenv import load_dotenv
 
-load_dotenv('.env')
 openai_key = os.environ.get("OPENAI_KEY")
 
-load_dotenv('.env')
 printful_key = os.environ.get("PRINTFUL_KEY")
 
-print(openai_key)
-print(printful_key)
 
 app = Flask(__name__)
 cors = CORS(app)
