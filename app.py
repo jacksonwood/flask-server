@@ -1,16 +1,8 @@
-from flask import Flask, jsonify, request, send_file
+from flask import Flask, jsonify, request
 import os
 import openai
 import requests
-import argparse
-import json
-import time
-from PIL import Image, ImageDraw, ImageFont
 from flask_cors import CORS, cross_origin
-from io import BytesIO
-import io
-from pathlib import Path
-import uuid
 
 openai_key = os.environ.get("OPENAI_KEY")
 
