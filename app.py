@@ -9,7 +9,6 @@ openai_key = os.environ.get("OPENAI_KEY")
 
 printful_key = os.environ.get("PRINTFUL_KEY")
 
-prompt_lock = threading.Lock()
 prompt = None
 
 task_lock = threading.Lock()
@@ -34,9 +33,7 @@ CORS(app, resources={r"/generate_product/": {"origins": "*"},
 @ app.route("/load_ai/<input_value>", methods=['GET'])
 @cross_origin(origin='*', headers=['Content-Type', 'Authorization'])
 def load_ai(input_value):
-    global prompt
-    with prompt_lock:
-        prompt = input_value
+    prompt = input_value
     if prompt is None or prompt == "":
         return jsonify({"error": "prompt parameter is required"}), 400
     openai.api_key = openai_key
