@@ -1,86 +1,54 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify
 import os
 import openai
 import requests
+import time
 from flask_cors import CORS, cross_origin
-import threading
 
 openai_key = os.environ.get("OPENAI_KEY")
 
 printful_key = os.environ.get("PRINTFUL_KEY")
 
-prompt_lock = threading.Lock()
-prompt = None
 
 app = Flask(__name__)
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
-CORS(app, resources={r"/generate_product/": {"origins": "*"},
-                     r"/view_product/": {"origins": "*"},
-                     r"/get_all_products/<input_value>": {"origins": "*"},
-                     r"/load_ai/<input_value>": {"origins": "*"},
-                     r"/generate_text/<input_value>": {"origins": "*"}})
+CORS(app, resources={r"/load_ai/<input_value>": {"origins": "*"}})
 
 
-@ app.route("/load_ai/<input_value>", methods=['GET'])
+@ app.route("/load_ai/<input_value>", methods=['GET', 'POST'])
 @cross_origin(origin='*', headers=['Content-Type', 'Authorization'])
 def load_ai(input_value):
-    global prompt
-    with prompt_lock:
-        prompt = input_value
-    if prompt is None or prompt == "":
-        return jsonify({"error": "prompt parameter is required"}), 400
+    # Create a session
+    session = requests.Session()
+
+    # Set the headers for the session
+    headers = {
+        'Authorization': 'Bearer ' + printful_key,
+        'Content-Type': 'application/json'
+    }
+    session.headers.update(headers)
+
     openai.api_key = openai_key
     try:
         response = openai.Image.create(
-            prompt=prompt,
+            prompt=input_value,
             n=1,
             size="256x256"
         )
     except openai.error.InvalidRequestError as e:
         return jsonify({"error": str(e)}), 400
-    return jsonify({"image_url": response['data'][0]['url']})
+    image_url = response['data'][0]['url']
+    print(image_url)
 
-
-@ app.route("/generate_text/<input_value>", methods=['GET'])
-@cross_origin(origin='*', headers=['Content-Type', 'Authorization'])
-def generate_text(input_value):
-    prompt = input_value
-    if prompt is None or prompt == "":
-        return jsonify({"error": "prompt parameter is required"}), 400
-
-    openai.api_key = openai_key
-    try:
-        response = openai.Completion.create(
-            model="text-davinci-003",
-            prompt="Give an alternative prompt for the following that would have yielded a better image: " + prompt,
-            max_tokens=1000,
-            temperature=0.9)
-    except openai.error.InvalidRequestError as e:
-        return jsonify({"error": str(e)}), 400
-    return response.choices[0].text
-
-
-@app.route("/generate_product", methods=['POST', 'GET'])
-@cross_origin(origin='*', headers=['Content-Type', 'Authorization'])
-def generate_product():
     chest_logo = "https://gateway.pinata.cloud/ipfs/QmXKu3kbkksCJsHaoJ2N5KUsRF3HFWuvacZTP7arhD3rVS?_gl=1*oadv6z*_ga*MjE0MjEyNjU3NC4xNjc1MDE0NTg2*_ga_5RMPXG14TE*MTY3NTYzMTAyOC43LjAuMTY3NTYzMTAyOC42MC4wLjA.&__cf_chl_tk=seoLwhAI3lVqOMpaODAvbQo6Ct_mfWGsiaO52TMpjPU-1675631030-0-gaNycGzNDdE"
-    # Avoid CORS policy by making a request through a proxy
-    # parse the string into a JSON object
-    data = request.json
-    # extract the URL
-    image_url = data['imageUrl']
 
     # Make a POST request to another API
     external_api_url = 'https://api.printful.com/store/products'
-    headers = {
-        'Authorization': 'Bearer ' + printful_key,
-        'Content-Type': 'application/json'
-    }
 
     data = {
         "sync_product": {
-            "name": prompt
+            "name": input_value
         },
         "sync_variants": [
             {
@@ -197,20 +165,14 @@ def generate_product():
             }
         ],
     }
-    external_api_response = requests.post(
+    external_api_response = session.post(
         external_api_url, headers=headers, json=data)
 
     response = external_api_response.json()
 
     id = response['result']['id']
-    name = response['result']['name']
 
     mock_url = 'https://api.printful.com/mockup-generator/create-task/438'
-
-    headers = {
-        'Authorization': 'Bearer ' + printful_key,
-        'Content-Type': 'application/json'
-    }
 
     data = {
         "variant_ids": [11576, 11577, 11578, 11579],
@@ -234,56 +196,49 @@ def generate_product():
         ],
         "options": ["Back"]
     }
-    mock_results = requests.post(mock_url, headers=headers, json=data)
+    mock_results = session.post(mock_url, headers=headers, json=data)
     data = mock_results.json()
     print(data)
     task_key = data['result']['task_key']
-
-    print(jsonify({"task_key": task_key, "id": str(id), "name": name}).json)
-    return jsonify({"task_key": task_key, "id": str(id), "name": name}).json
-
-
-@ app.route("/view_product", methods=['POST'])
-@ cross_origin(origin='*', headers=['Content-Type', 'Authorization'])
-def view_product():
+    id = str(id)
+    print(id)
     try:
-        data = request.json
-        task_key = data['task_key']
+        print(task_key)
         new_url = f'https://api.printful.com/mockup-generator/task?task_key={task_key}'
 
-        headers = {
-            'Authorization': 'Bearer ' + printful_key,
-            'Content-Type': 'application/json'
-        }
+        while True:
+            y = session.get(url=new_url, headers=headers)
+            if y.status_code == 200:
+                new_data = y.json()
+                if new_data['result']['status'] != 'pending':
+                    try:
+                        mockups = new_data['result']['mockups']
+                        new_url = mockups[0]['mockup_url']
+                        break
+                    except KeyError:
+                        print("The key 'mockups' was not found in the response data")
+                else:
+                    print("The task is still pending, waiting...")
+                    time.sleep(4)
+            else:
+                print(
+                    f"The request was unsuccessful, status code: {y.status_code}")
+                break
+    except Exception as e:
+        print(f"An error occurred while trying to get the mockup URL: {e}")
 
-        y = requests.get(url=new_url, headers=headers)
-        data = y.json()
-        mockups = data['result']['mockups']
-        print(data)
-        new_url = mockups[0]['mockup_url']
-        return jsonify({"image_url": new_url})
+    final_mock = new_url
 
-    except openai.error.InvalidRequestError as e:
-        return jsonify({"error": str(e)}), 400
-
-
-@ app.route("/get_all_products/<input_value>", methods=['GET'])
-@ cross_origin(origin='*', headers=['Content-Type', 'Authorization'])
-def get_all_products(input_value):
     try:
-        url = f'https://api.printful.com/sync/products/{input_value}'
+        get_product_url = f'https://api.printful.com/sync/products/{id}'
 
-        headers = {
-            'Authorization': 'Bearer ' + printful_key,
-            'Content-Type': 'application/json'
-        }
-
-        y = requests.get(url=url, headers=headers)
+        y = session.get(url=get_product_url, headers=headers)
         data = y.json()
-        return jsonify(data)
 
     except openai.error.InvalidRequestError as e:
         return jsonify({"error": str(e)}), 400
+
+    return (jsonify({"mockup": final_mock, "product": data}))
 
 
 if __name__ == "__main__":
