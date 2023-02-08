@@ -13,6 +13,7 @@ headers = {
     'Authorization': 'Bearer ' + printful_key,
     'Content-Type': 'application/json'
 }
+task_lock = threading.Lock()
 
 app = Flask(__name__)
 cors = CORS(app)
