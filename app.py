@@ -9,12 +9,6 @@ openai_key = os.environ.get("OPENAI_KEY")
 
 printful_key = os.environ.get("PRINTFUL_KEY")
 
-prompt_lock = threading.Lock()
-prompt = None
-
-task_lock = threading.Lock()
-task_key = None
-
 
 headers = {
     'Authorization': 'Bearer ' + printful_key,
@@ -52,8 +46,7 @@ def load_ai(input_value):
 @ app.route("/generate_text/<input_value>", methods=['GET'])
 @cross_origin(origin='*', headers=['Content-Type', 'Authorization'])
 def generate_text(input_value):
-    with prompt_lock:
-        prompt = input_value
+    prompt = input_value
     if prompt is None or prompt == "":
         return jsonify({"error": "prompt parameter is required"}), 400
 
