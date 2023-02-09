@@ -28,6 +28,7 @@ def load_ai(input_value):
         'Content-Type': 'application/json'
     }
     session.headers.update(headers)
+    '''
 
     openai.api_key = openai_key
     try:
@@ -38,8 +39,11 @@ def load_ai(input_value):
         )
     except openai.error.InvalidRequestError as e:
         return jsonify({"error": str(e)}), 400
+
     image_url = response['data'][0]['url']
     print(image_url)
+    '''
+    image_url = 'https://www.twitter.com'
 
     chest_logo = "https://gateway.pinata.cloud/ipfs/QmXKu3kbkksCJsHaoJ2N5KUsRF3HFWuvacZTP7arhD3rVS?_gl=1*oadv6z*_ga*MjE0MjEyNjU3NC4xNjc1MDE0NTg2*_ga_5RMPXG14TE*MTY3NTYzMTAyOC43LjAuMTY3NTYzMTAyOC42MC4wLjA.&__cf_chl_tk=seoLwhAI3lVqOMpaODAvbQo6Ct_mfWGsiaO52TMpjPU-1675631030-0-gaNycGzNDdE"
 
