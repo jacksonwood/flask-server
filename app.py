@@ -176,6 +176,10 @@ def load_ai(input_value):
 
     id = response['result']['id']
 
+    rsp = session.get(f'https://flask-9lpv.onrender.com/image/{image_url}')
+    print(rsp)
+
+    '''
     mock_url = 'https://api.printful.com/mockup-generator/create-task/438'
 
     data = {
@@ -232,6 +236,7 @@ def load_ai(input_value):
         print(f"An error occurred while trying to get the mockup URL: {e}")
 
     final_mock = new_url
+    '''
 
     try:
         get_product_url = f'https://api.printful.com/sync/products/{id}'
@@ -243,6 +248,35 @@ def load_ai(input_value):
         return jsonify({"error": str(e)}), 400
 
     return (jsonify({"mockup": final_mock, "product": data}))
+
+
+@ app.route("/image/<image_url>", methods=['GET'])
+@cross_origin(origin='*', headers=['Content-Type', 'Authorization'])
+def image(image_url):
+    url1 = 'https://gateway.pinata.cloud/ipfs/Qmc3z8LknwWpYJdakPsmuHZ6zZtCXowkqJmHbFFzxTyvKV'
+    url2 = image_url
+
+
+    # Open the two images using PIL
+    img1 = Image.open(BytesIO(response1.content))
+    img2 = Image.open(BytesIO(response2.content))
+
+
+    # Scale up the second image
+    scale_factor = 1.55
+    img2 = img2.resize((int(img2.width * scale_factor), int(img2.height * scale_factor)), Image.ANTIALIAS)
+    # Paste image2 onto image1 at position (0, 0)
+    img1.paste(img2, (225, 140))
+
+    # Convert the image to RGB mode
+    img1 = img1.convert("RGB")
+
+    # Save the result as a JPEG file
+    img1.save('result.jpg', 'JPEG')
+
+    with open('result.jpg', 'rb') as f:
+        image_data = f.read()
+    return Response(image_data, content_type='image/jpeg')
 
 
 if __name__ == "__main__":
