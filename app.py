@@ -1,9 +1,11 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, Response
 import os
 import openai
 import requests
 import time
 from flask_cors import CORS, cross_origin
+from io import BytesIO
+from PIL import Image
 
 openai_key = os.environ.get("OPENAI_KEY")
 
@@ -28,7 +30,6 @@ def load_ai(input_value):
         'Content-Type': 'application/json'
     }
     session.headers.update(headers)
-    
 
     openai.api_key = openai_key
     try:
@@ -42,7 +43,7 @@ def load_ai(input_value):
 
     image_url = response['data'][0]['url']
     print(image_url)
-    
+
     #image_url = 'https://gateway.pinata.cloud/ipfs/QmeXSVnT8BGyxA39zERiEijFwEfgsbFmEUDKRc49pBX3Uo?_gl=1*pkq9dw*_ga*MjE0MjEyNjU3NC4xNjc1MDE0NTg2*_ga_5RMPXG14TE*MTY3NTk0ODcyNC45LjAuMTY3NTk0ODcyNi41OC4wLjA.'
 
     chest_logo = "https://gateway.pinata.cloud/ipfs/QmXKu3kbkksCJsHaoJ2N5KUsRF3HFWuvacZTP7arhD3rVS?_gl=1*oadv6z*_ga*MjE0MjEyNjU3NC4xNjc1MDE0NTg2*_ga_5RMPXG14TE*MTY3NTYzMTAyOC43LjAuMTY3NTYzMTAyOC42MC4wLjA.&__cf_chl_tk=seoLwhAI3lVqOMpaODAvbQo6Ct_mfWGsiaO52TMpjPU-1675631030-0-gaNycGzNDdE"
@@ -179,65 +180,6 @@ def load_ai(input_value):
     rsp = session.get(f'https://flask-9lpv.onrender.com/image/{image_url}')
     print(rsp)
 
-    '''
-    mock_url = 'https://api.printful.com/mockup-generator/create-task/438'
-
-    data = {
-        "variant_ids": [11576, 11577, 11578, 11579],
-
-        "product_options": {
-            "lifelike": False
-        },
-        "files": [
-            {
-                "placement": "back",
-                "image_url": image_url,
-                "position": {
-                    "area_width": 1800,
-                    "area_height": 2400,
-                    "width": 1800,
-                    "height": 1800,
-                    "top": 600,
-                    "left": 0
-                }
-            }
-        ],
-        "options": ["Back"]
-    }
-    mock_results = session.post(mock_url, headers=headers, json=data)
-    data = mock_results.json()
-    print(data)
-    task_key = data['result']['task_key']
-    id = str(id)
-    print(id)
-    try:
-        print(task_key)
-        new_url = f'https://api.printful.com/mockup-generator/task?task_key={task_key}'
-
-        while True:
-            y = session.get(url=new_url, headers=headers)
-            if y.status_code == 200:
-                new_data = y.json()
-                if new_data['result']['status'] != 'pending':
-                    try:
-                        mockups = new_data['result']['mockups']
-                        new_url = mockups[0]['mockup_url']
-                        break
-                    except KeyError:
-                        print("The key 'mockups' was not found in the response data")
-                else:
-                    print("The task is still pending, waiting...")
-                    time.sleep(4)
-            else:
-                print(
-                    f"The request was unsuccessful, status code: {y.status_code}")
-                break
-    except Exception as e:
-        print(f"An error occurred while trying to get the mockup URL: {e}")
-
-    final_mock = new_url
-    '''
-
     try:
         get_product_url = f'https://api.printful.com/sync/products/{id}'
 
@@ -247,24 +189,33 @@ def load_ai(input_value):
     except openai.error.InvalidRequestError as e:
         return jsonify({"error": str(e)}), 400
 
+    x = image(id)
+
     return (jsonify({"mockup": final_mock, "product": data}))
 
 
-@ app.route("/image/<image_url>", methods=['GET'])
+@app.route("/image/<id>", methods=['GET'])
 @cross_origin(origin='*', headers=['Content-Type', 'Authorization'])
-def image(image_url):
+def image(id):
+    session = requests.Session()
     url1 = 'https://gateway.pinata.cloud/ipfs/Qmc3z8LknwWpYJdakPsmuHZ6zZtCXowkqJmHbFFzxTyvKV'
-    url2 = image_url
 
+    url_post = 'https://api.printful.com/store/products/' + str(id)
+    y = session.get(url=url_post, headers=headers)
+    data = y.json()
+    url2 = data['result']['sync_variants'][0]['files'][1]['url']
+
+    response1 = session.get(url1)
+    response2 = session.get(url2)
 
     # Open the two images using PIL
     img1 = Image.open(BytesIO(response1.content))
     img2 = Image.open(BytesIO(response2.content))
 
-
     # Scale up the second image
     scale_factor = 1.55
-    img2 = img2.resize((int(img2.width * scale_factor), int(img2.height * scale_factor)), Image.ANTIALIAS)
+    img2 = img2.resize((int(img2.width * scale_factor),
+                       int(img2.height * scale_factor)), Image.ANTIALIAS)
     # Paste image2 onto image1 at position (0, 0)
     img1.paste(img2, (225, 140))
 
