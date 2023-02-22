@@ -2,5 +2,5 @@ Flask
 Gunicorn
 openai
 flask_cors
-PIL
+Pillow
 io
