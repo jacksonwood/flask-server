@@ -15,7 +15,8 @@ printful_key = os.environ.get("PRINTFUL_KEY")
 app = Flask(__name__)
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
-CORS(app, resources={r"/load_ai/<input_value>": {"origins": "*"}})
+CORS(app, resources={r"/load_ai/<input_value>": {"origins": "*"},
+                     r"/image/<id>": {"origins": "*"}})
 
 
 @ app.route("/load_ai/<input_value>", methods=['GET', 'POST'])
