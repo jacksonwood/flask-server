@@ -3,4 +3,3 @@ Gunicorn
 openai
 flask_cors
 Pillow
-io
