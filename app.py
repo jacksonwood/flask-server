@@ -20,7 +20,7 @@ CORS(app, resources={r"/load_ai/<input_value>": {"origins": "*"},
 
 
 @ app.route("/load_ai/<input_value>", methods=['GET', 'POST'])
-@cross_origin(origin='*', headers=['Content-Type', 'Authorization'])
+@cross_origin(origin='https://www.generativegarments.com', headers=['Content-Type', 'Authorization'])
 def load_ai(input_value):
     # Create a session
     session = requests.Session()
@@ -196,7 +196,7 @@ def load_ai(input_value):
 
 
 @app.route("/image/<id>", methods=['GET'])
-@cross_origin(origin='*', headers=['Content-Type', 'Authorization'])
+@cross_origin(origin='https://www.generativegarments.com', headers=['Content-Type', 'Authorization'])
 def image(id):
     session = requests.Session()
     headers = {
