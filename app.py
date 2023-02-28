@@ -13,23 +13,23 @@ printful_key = os.environ.get("PRINTFUL_KEY")
 
 
 app = Flask(__name__)
-cors = CORS(app, origins=['https://www.generativegarments.com'])
+cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
-CORS(app, resources={r"/load_ai/<input_value>": {"origins": "*"},
-                     r"/image/<id>": {"origins": "*"}})
+CORS(app, resources={r"/load_ai/<input_value>": {"origins": "*"}})
+
+headers = {
+    'Authorization': 'Bearer ' + printful_key,
+    'Content-Type': 'application/json'
+}
 
 
 @ app.route("/load_ai/<input_value>", methods=['GET', 'POST'])
-@cross_origin(origin='https://www.generativegarments.com', headers=['Content-Type', 'Authorization'])
+@cross_origin(origin='*', headers=['Content-Type', 'Authorization'])
 def load_ai(input_value):
     # Create a session
     session = requests.Session()
 
     # Set the headers for the session
-    headers = {
-        'Authorization': 'Bearer ' + printful_key,
-        'Content-Type': 'application/json'
-    }
     session.headers.update(headers)
 
     openai.api_key = openai_key
@@ -190,24 +190,19 @@ def load_ai(input_value):
     except openai.error.InvalidRequestError as e:
         return jsonify({"error": str(e)}), 400
 
-    return (jsonify({"product": data}))
+    x = image(id)
+
+    return (jsonify({"mockup": final_mock, "product": data}))
 
 
 @app.route("/image/<id>", methods=['GET'])
-@cross_origin(origin='https://www.generativegarments.com', headers=['Content-Type', 'Authorization'])
+@cross_origin(origin='*', headers=['Content-Type', 'Authorization'])
 def image(id):
     session = requests.Session()
-    headers = {
-        'Authorization': 'Bearer ' + printful_key,
-        'Content-Type': 'application/json'
-    }
-    session.headers.update(headers)
-
     url1 = 'https://gateway.pinata.cloud/ipfs/Qmc3z8LknwWpYJdakPsmuHZ6zZtCXowkqJmHbFFzxTyvKV'
 
     url_post = 'https://api.printful.com/store/products/' + str(id)
     y = session.get(url=url_post, headers=headers)
-
     data = y.json()
     url2 = data['result']['sync_variants'][0]['files'][1]['url']
 
