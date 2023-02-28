@@ -1,22 +1,25 @@
-from flask import Flask, jsonify, Response
+from flask import Flask, jsonify, Response, url_for, redirect, request
 import os
 import openai
 import requests
 import time
 from flask_cors import CORS, cross_origin
+from dotenv import load_dotenv
 from io import BytesIO
 from PIL import Image
 
+
+load_dotenv('.env')
 openai_key = os.environ.get("OPENAI_KEY")
 
+load_dotenv('.env')
 printful_key = os.environ.get("PRINTFUL_KEY")
 
 
 app = Flask(__name__)
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
-CORS(app, resources={r"/*": {"origins": "https://www.generativegarments.com"}})
-
+CORS(app, resources={r"/load_ai/<input_value>": {"origins": "*"}})
 headers = {
     'Authorization': 'Bearer ' + printful_key,
     'Content-Type': 'application/json'
@@ -28,8 +31,8 @@ headers = {
 def load_ai(input_value):
     # Create a session
     session = requests.Session()
-
     # Set the headers for the session
+
     session.headers.update(headers)
 
     openai.api_key = openai_key
@@ -43,9 +46,8 @@ def load_ai(input_value):
         return jsonify({"error": str(e)}), 400
 
     image_url = response['data'][0]['url']
-    print(image_url)
 
-    #image_url = 'https://gateway.pinata.cloud/ipfs/QmeXSVnT8BGyxA39zERiEijFwEfgsbFmEUDKRc49pBX3Uo?_gl=1*pkq9dw*_ga*MjE0MjEyNjU3NC4xNjc1MDE0NTg2*_ga_5RMPXG14TE*MTY3NTk0ODcyNC45LjAuMTY3NTk0ODcyNi41OC4wLjA.'
+    # image_url = 'https://gateway.pinata.cloud/ipfs/QmeXSVnT8BGyxA39zERiEijFwEfgsbFmEUDKRc49pBX3Uo?_gl=1*pkq9dw*_ga*MjE0MjEyNjU3NC4xNjc1MDE0NTg2*_ga_5RMPXG14TE*MTY3NTk0ODcyNC45LjAuMTY3NTk0ODcyNi41OC4wLjA.'
 
     chest_logo = "https://gateway.pinata.cloud/ipfs/QmXKu3kbkksCJsHaoJ2N5KUsRF3HFWuvacZTP7arhD3rVS?_gl=1*oadv6z*_ga*MjE0MjEyNjU3NC4xNjc1MDE0NTg2*_ga_5RMPXG14TE*MTY3NTYzMTAyOC43LjAuMTY3NTYzMTAyOC42MC4wLjA.&__cf_chl_tk=seoLwhAI3lVqOMpaODAvbQo6Ct_mfWGsiaO52TMpjPU-1675631030-0-gaNycGzNDdE"
 
@@ -178,9 +180,6 @@ def load_ai(input_value):
 
     id = response['result']['id']
 
-    rsp = session.get(f'https://flask-9lpv.onrender.com/image/{image_url}')
-    print(rsp)
-
     try:
         get_product_url = f'https://api.printful.com/sync/products/{id}'
 
@@ -190,7 +189,10 @@ def load_ai(input_value):
     except openai.error.InvalidRequestError as e:
         return jsonify({"error": str(e)}), 400
 
-    return (jsonify({"product": data}))
+    x = image(id)
+    print(data)
+
+    return (jsonify({"product": data, 'url': image_url}))
 
 
 @app.route("/image/<id>", methods=['GET'])
