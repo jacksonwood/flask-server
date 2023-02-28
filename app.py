@@ -192,7 +192,7 @@ def load_ai(input_value):
 
     x = image(id)
 
-    return (jsonify({"mockup": final_mock, "product": data}))
+    return (jsonify({"product": data}))
 
 
 @app.route("/image/<id>", methods=['GET'])
