@@ -190,8 +190,6 @@ def load_ai(input_value):
     except openai.error.InvalidRequestError as e:
         return jsonify({"error": str(e)}), 400
 
-    x = image(id)
-
     return (jsonify({"product": data}))
 
 
