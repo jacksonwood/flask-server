@@ -4,15 +4,12 @@ import openai
 import requests
 import time
 from flask_cors import CORS, cross_origin
-from dotenv import load_dotenv
 from io import BytesIO
 from PIL import Image
 
 
-load_dotenv('.env')
 openai_key = os.environ.get("OPENAI_KEY")
 
-load_dotenv('.env')
 printful_key = os.environ.get("PRINTFUL_KEY")
 
 
