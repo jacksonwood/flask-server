@@ -189,7 +189,7 @@ def load_ai(input_value):
         return jsonify({"error": str(e)}), 400
 
     print(data)
-    pointer[id] = image_url
+    pointer[str(id)] = image_url
 
     return (jsonify({"product": data, 'url': image_url}))
 
@@ -199,7 +199,8 @@ def load_ai(input_value):
 def image(id):
 
     url1 = 'https://gateway.pinata.cloud/ipfs/Qmc3z8LknwWpYJdakPsmuHZ6zZtCXowkqJmHbFFzxTyvKV'
-    url2 = pointer[id]
+    url2 = pointer[str(id)]
+    print(url2)
     #url_post = 'https://api.printful.com/store/products/' + str(id)
     #y = requests.get(url=url_post, headers=headers)
     #data = y.json()
