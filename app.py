@@ -22,6 +22,8 @@ headers = {
     'Content-Type': 'application/json'
 }
 
+pointer = {}
+
 
 @ app.route("/load_ai/<input_value>", methods=['GET', 'POST'])
 @cross_origin(origin='*', headers=['Content-Type', 'Authorization'])
@@ -187,17 +189,17 @@ def load_ai(input_value):
         return jsonify({"error": str(e)}), 400
 
     print(data)
+    pointer[id] = image_url
 
     return (jsonify({"product": data, 'url': image_url}))
 
 
-@app.route("/image/<input_value>", methods=['GET'])
+@app.route("/image/<id>", methods=['GET'])
 @cross_origin(origin='*', headers=['Content-Type', 'Authorization'])
-def image(input_value):
-    resp = load_ai(input_value)
-    url2 = resp.data.url
-    url1 = 'https://gateway.pinata.cloud/ipfs/Qmc3z8LknwWpYJdakPsmuHZ6zZtCXowkqJmHbFFzxTyvKV'
+def image(id):
 
+    url1 = 'https://gateway.pinata.cloud/ipfs/Qmc3z8LknwWpYJdakPsmuHZ6zZtCXowkqJmHbFFzxTyvKV'
+    url2 = pointer[id]
     #url_post = 'https://api.printful.com/store/products/' + str(id)
     #y = requests.get(url=url_post, headers=headers)
     #data = y.json()
