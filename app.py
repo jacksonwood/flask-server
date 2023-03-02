@@ -194,16 +194,15 @@ def load_ai(input_value):
 @app.route("/image/<id>", methods=['GET'])
 @cross_origin(origin='*', headers=['Content-Type', 'Authorization'])
 def image(id):
-    session = requests.Session()
     url1 = 'https://gateway.pinata.cloud/ipfs/Qmc3z8LknwWpYJdakPsmuHZ6zZtCXowkqJmHbFFzxTyvKV'
 
     url_post = 'https://api.printful.com/store/products/' + str(id)
-    y = session.get(url=url_post, headers=headers)
+    y = requests.get(url=url_post, headers=headers)
     data = y.json()
     url2 = data['result']['sync_variants'][0]['files'][1]['url']
 
-    response1 = session.get(url1)
-    response2 = session.get(url2)
+    response1 = requests.get(url1)
+    response2 = requests.get(url2)
 
     # Open the two images using PIL
     img1 = Image.open(BytesIO(response1.content))
